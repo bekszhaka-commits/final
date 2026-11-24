@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Campus Delivery Robot</title>
+<style>
+:root{--bg:#e9f0ef;--panel:#fbfdfc;--ink:#12242b;--mut:#51666e;--line:#cfdcda;--cell:#dbe7e5;--wall:#26363d;--route:#0d8a8c;--routebg:#bfe6e3;--haz:#d1495b;--hazbg:#f6d3d8;--go:#c27a08;--start:#2f6db3;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a1f;--panel:#17262d;--ink:#e8f1ef;--mut:#9db3b8;--line:#2a3e46;--cell:#223840;--wall:#05090b;--route:#3fd0d0;--routebg:#1b5559;--haz:#ef7385;--hazbg:#5a2a33;--go:#f0b44a;--start:#6fa8e8;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1a1f;--panel:#17262d;--ink:#e8f1ef;--mut:#9db3b8;--line:#2a3e46;--cell:#223840;--wall:#05090b;--route:#3fd0d0;--routebg:#1b5559;--haz:#ef7385;--hazbg:#5a2a33;--go:#f0b44a;--start:#6fa8e8;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;line-height:1.45}
+main{max-width:1060px;margin:0 auto;padding:24px 18px 40px}
+h1{font-size:clamp(1.7rem,4vw,2.4rem);margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--mut);margin:0 0 20px}
+.layout{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:820px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+h2{font-size:1.05rem;margin:0 0 10px}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+button{font:inherit;color:var(--ink);background:var(--cell);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--route);outline-offset:2px}
+.boardwrap{position:relative;width:100%;aspect-ratio:1}
+.board{display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:6px;width:100%;height:100%}
+.cell{position:relative;display:flex;align-items:flex-start;justify-content:flex-start;padding:6px 8px;border-radius:10px;background:var(--cell);font-weight:600;font-size:.85rem;color:var(--mut);border:2px solid transparent}
+.cell.route{background:var(--routebg);color:var(--ink)}
+.cell.wall{background:var(--wall);color:transparent}
+.cell.haz{background:var(--hazbg);border-color:var(--haz)}
+.cell .tag{position:absolute;right:8px;bottom:6px;font-size:1.05rem;font-weight:800}
+.cell.start{border-color:var(--start)}.cell.start .tag{color:var(--start)}
+.cell.goal{border-color:var(--go)}.cell.goal .tag{color:var(--go)}
+.cell.haz .tag{color:var(--haz)}
+.cell.sensed::after{content:"";position:absolute;inset:3px;border:2px dashed var(--ink);border-radius:8px;opacity:.55}
+svg.path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--mut);font-size:.82rem;margin-top:10px}
+.controls{display:grid;gap:14px}
+label{display:flex;justify-content:space-between;font-weight:600;font-size:.92rem}
+input[type=range]{width:100%;accent-color:var(--route)}
+.seg{display:flex;gap:6px}.seg button{flex:1}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+.route-text{font-weight:600;overflow-wrap:anywhere}
+.warn{color:var(--haz);font-weight:600}
+.bar{height:14px;background:var(--cell);border-radius:7px;overflow:hidden;margin:4px 0 10px}
+.bar i{display:block;height:100%;border-radius:7px}
+.big{font-size:2.3rem;font-weight:800;letter-spacing:-.02em;line-height:1}
+.big.move{color:var(--route)}.big.wait{color:var(--go)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin-top:8px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+.note{color:var(--mut);font-size:.85rem;margin:8px 0 0}
+.stack{display:grid;gap:16px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Campus delivery robot</h1>
+  <p class="sub">Plan a route with A*, update the obstacle probability with Bayes’ rule, then choose Move or Wait with an MDP.</p>
+  <div class="layout">
+    <section class="panel" aria-label="Campus map">
+      <h2>1. Campus map</h2>
+      <div class="tools" role="group" aria-label="Tool">
+        <button data-tool="wall" aria-pressed="true">Wall</button>
+        <button data-tool="start" aria-pressed="false">Start</button>
+        <button data-tool="goal" aria-pressed="false">Goal</button>
+        <button data-tool="haz" aria-pressed="false">Hazard</button>
+        <button id="clear">Clear walls</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="boardwrap">
+        <div class="board" id="board"></div>
+        <svg class="path" id="svg" viewBox="0 0 5 5" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="legend"><span>Pick a tool, then click cells.</span><span>S start</span><span>G goal (+10)</span><span>! hazard (−10)</span><span>Dashed outline: cell the sensor checks</span></div>
+    </section>
+    <div class="stack">
+      <section class="panel controls" aria-label="Sensor">
+        <h2>2. Sensor</h2>
+        <div><label for="prior">Prior chance the next cell is blocked <span id="priorV"></span></label><input id="prior" type="range" min="1" max="99" value="20"></div>
+        <div><label for="acc">Sensor accuracy <span id="accV"></span></label><input id="acc" type="range" min="50" max="99" value="90"></div>
+        <div class="seg" role="group" aria-label="Sensor reading"><button id="alarm" aria-pressed="true">Alarm</button><button id="quiet" aria-pressed="false">No alarm</button></div>
+      </section>
+      <section class="panel" aria-label="Results">
+        <h2>3. Results</h2>
+        <div id="out"></div>
+      </section>
+    </div>
+  </div>
+</main>
+<script>
+const N=5,$=id=>document.getElementById(id);
+const DEF=()=>({walls:new Set([6,7,13,17]),haz:new Set([9]),start:20,goal:4});
+const S=Object.assign(DEF(),{tool:"wall",alarm:true,acc:.9,prior:.2});
+const MOVE_R=.1,GOAL_R=10,HAZ_R=-10,GAMMA=.9,PG={C:.9,B:.3},WT={C:{C:.7,B:.3},B:{C:.4,B:.6}};
+
+function astar(){
+  const gi=S.goal,h=i=>Math.abs((i/N|0)-(gi/N|0))+Math.abs(i%N-gi%N);
+  const g={[S.start]:0},prev={},open=[[h(S.start),S.start]],done=new Set();
+  while(open.length){
+    open.sort((a,b)=>a[0]-b[0]);const cur=open.shift()[1];
+    if(done.has(cur))continue;done.add(cur);
+    if(cur===gi){const p=[cur];while(prev[p[0]]!==undefined)p.unshift(prev[p[0]]);return p}
+    const r=cur/N|0,c=cur%N;
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=r+dr,nc=c+dc;if(nr<0||nc<0||nr>=N||nc>=N)continue;
+      const n=nr*N+nc;if(S.walls.has(n))continue;
+      const ng=g[cur]+1+(S.haz.has(n)?20:0);
+      if(g[n]===undefined||ng<g[n]){g[n]=ng;prev[n]=cur;open.push([ng+h(n),n])}
+    }
+  }
+  return null;
+}
+const posterior=(p,a,alarm)=>alarm?a*p/(a*p+(1-a)*(1-p)):(1-a)*p/((1-a)*p+a*(1-p));
+function solveMDP(){
+  const q=(s,a,V)=>a==="M"?MOVE_R+PG[s]*GOAL_R+(1-PG[s])*HAZ_R:GAMMA*(WT[s].C*V.C+WT[s].B*V.B);
+  let V={C:0,B:0};
+  for(let i=0;i<1000;i++){
+    const n={C:Math.max(q("C","M",V),q("C","W",V)),B:Math.max(q("B","M",V),q("B","W",V))};
+    const d=Math.max(Math.abs(n.C-V.C),Math.abs(n.B-V.B));V=n;if(d<1e-9)break;
+  }
+  return{C:{M:q("C","M",V),W:q("C","W",V)},B:{M:q("B","M",V),W:q("B","W",V)}};
+}
+const f2=x=>x.toFixed(2),pct=x=>(x*100).toFixed(1)+"%";
+
+function render(){
+  const path=astar(),onRoute=new Set(path||[]),sensed=path&&path.length>1?path[1]:-1;
+  $("board").innerHTML="";
+  for(let i=0;i<N*N;i++){
+    const b=document.createElement("button");
+    let cls="cell";
+    if(S.walls.has(i))cls+=" wall";else if(S.haz.has(i))cls+=" haz";else if(onRoute.has(i))cls+=" route";
+    if(i===S.start)cls+=" start";if(i===S.goal)cls+=" goal";if(i===sensed)cls+=" sensed";
+    b.className=cls;
+    const tag=i===S.start?"S":i===S.goal?"G":S.haz.has(i)?"!":"";
+    b.innerHTML=(i+1)+(tag?`<span class="tag">${tag}</span>`:"");
+    b.setAttribute("aria-label",`Cell ${i+1}${S.walls.has(i)?", wall":""}${tag==="S"?", start":tag==="G"?", goal":""}${S.haz.has(i)?", hazard":""}`);
+    b.onclick=()=>click(i);
+    $("board").appendChild(b);
+  }
+  $("svg").innerHTML=path&&path.length>1?`<polyline points="${path.map(i=>`${i%N+.5},${(i/N|0)+.5}`).join(" ")}" fill="none" stroke="var(--route)" stroke-width=".09" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray=".02 .16" vector-effect="non-scaling-stroke" style="stroke-width:5px"/>`:"";
+  document.querySelectorAll("[data-tool]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tool===S.tool));
+  $("alarm").setAttribute("aria-pressed",S.alarm);$("quiet").setAttribute("aria-pressed",!S.alarm);
+  $("priorV").textContent=pct(S.prior);$("accV").textContent=pct(S.acc);
+  results(path);
+}
+function results(path){
+  const o=$("out");
+  if(!path){o.innerHTML=`<p class="warn">No route exists. Remove a wall or move the start or goal.</p>`;return}
+  const steps=path.length-1,hz=path.filter(i=>S.haz.has(i)).length;
+  const reward=steps>0?MOVE_R*(steps-1)+GOAL_R+HAZ_R*hz:0;
+  const post=posterior(S.prior,S.acc,S.alarm),Q=solveMDP();
+  const em=(1-post)*Q.C.M+post*Q.B.M,ew=(1-post)*Q.C.W+post*Q.B.W,act=em>=ew?"Move":"Wait";
+  const dM=Q.C.M-Q.C.W,dB=Q.B.M-Q.B.W,be=Math.min(1,Math.max(0,dM/(dM-dB)));
+  const next=path.length>1?path[1]+1:null;
+  o.innerHTML=`
+  <h3 style="margin:0 0 4px;font-size:.95rem">A* route</h3>
+  <div class="route-text">${path.map(i=>i+1).join(" → ")}</div>
+  <p class="note">${steps} step${steps===1?"":"s"}, route reward ≈ ${f2(reward)}${hz?` <span class="warn">· crosses ${hz} hazard${hz>1?"s":""}</span>`:" · avoids hazards when it can"}</p>
+  ${next===null?"":`<h3 style="margin:16px 0 4px;font-size:.95rem">Bayesian update (sensor checks cell ${next})</h3>
+  <div>Before: ${pct(S.prior)}</div><div class="bar"><i style="width:${S.prior*100}%;background:var(--start)"></i></div>
+  <div>After ${S.alarm?"an alarm":"no alarm"}: <b>${pct(post)}</b></div><div class="bar"><i style="width:${post*100}%;background:var(--haz)"></i></div>`}
+  <h3 style="margin:16px 0 8px;font-size:.95rem">MDP recommendation</h3>
+  <div class="big ${act==="Move"?"move":"wait"}">${act.toUpperCase()}</div>
+  <p class="note">Expected value with ${pct(post)} chance blocked: Move ${f2(em)}, Wait ${f2(ew)}. Wait becomes better once the blocked probability is above ${pct(be)}.</p>
+  <table><tr><th>Corridor</th><th>Q(Move)</th><th>Q(Wait)</th></tr>
+  <tr><td>Clear</td><td>${f2(Q.C.M)}</td><td>${f2(Q.C.W)}</td></tr>
+  <tr><td>Blocked</td><td>${f2(Q.B.M)}</td><td>${f2(Q.B.W)}</td></tr></table>
+  <p class="note">Model: move +0.1, goal +10, hazard −10, γ = 0.9. Moving reaches the goal with chance 0.9 (clear) or 0.3 (blocked), otherwise it slips onto the hazard.</p>`;
+}
+function click(i){
+  const t=S.tool,fixed=i===S.start||i===S.goal;
+  if(t==="wall"){if(fixed)return;S.haz.delete(i);S.walls.has(i)?S.walls.delete(i):S.walls.add(i)}
+  else if(t==="haz"){if(fixed)return;S.walls.delete(i);S.haz.has(i)?S.haz.delete(i):S.haz.add(i)}
+  else if(t==="start"){if(i===S.goal)return;S.walls.delete(i);S.haz.delete(i);S.start=i}
+  else{if(i===S.start)return;S.walls.delete(i);S.haz.delete(i);S.goal=i}
+  render();
+}
+document.querySelectorAll("[data-tool]").forEach(b=>b.onclick=()=>{S.tool=b.dataset.tool;render()});
+$("clear").onclick=()=>{S.walls.clear();render()};
+$("reset").onclick=()=>{Object.assign(S,DEF(),{alarm:true,acc:.9,prior:.2});$("prior").value=20;$("acc").value=90;render()};
+$("prior").oninput=e=>{S.prior=e.target.value/100;render()};
+$("acc").oninput=e=>{S.acc=e.target.value/100;render()};
+$("alarm").onclick=()=>{S.alarm=true;render()};
+$("quiet").onclick=()=>{S.alarm=false;render()};
+render();
+</script>
+</body>
+</html>
