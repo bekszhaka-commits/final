@@ -107,21 +107,13 @@ Rename or move files as needed so this tree matches your repository.
 - Combine several sensor readings, or model the problem as a POMDP.
 - Estimate sensor and transition probabilities from real or simulated data.
 - Support larger maps and moving obstacles such as people.
-## AI usage
- 
-See `docs/ai_usage_declaration.md`. _Describe which tools were used (for example, Claude for code drafting and explanations) and what the team verified and changed itself._
- 
 ## Team
  
 See `docs/team_contributions.md`.
  
 | Name | Contribution |
 |---|---|
-| _Name 1_ | _e.g. A* module and map editor_ |
-| _Name 2_ | _e.g. Bayesian update and sensor controls_ |
-| _Name 3_ | _e.g. MDP, report and slides_ |
- 
-## License
- 
-_Choose a license (for example MIT) or state that the project is for coursework only._
- 
+| _Beksultan_ | _Web application(HTML), main code_ |
+| _Alikhan_ | _Make a presentation_ |
+| _Nursultan_ | _Tech report_ |
+| _Ermuhamed_ | _Read me file_ | 
