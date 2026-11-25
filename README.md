@@ -79,22 +79,6 @@ E[action] = (1 − b)·Q(Clear, action) + b·Q(Blocked, action)
  
 With these parameters, Wait is better once the blocked probability `b` is above about 11%. After a 69.2% alarm belief, Move is worth about −0.2 and Wait about 6.5, so the robot waits.
  
-## Repository structure
- 
-```
-campus-delivery-robot/
-├── campus_robot.html                 # interactive web app
-├── delivery_robot_campus_clean.py    # command-line version of the same pipeline
-├── README.md
-└── docs/
-    ├── technical_report.pdf
-    ├── presentation.pdf
-    ├── ai_usage_declaration.md
-    └── team_contributions.md
-```
- 
-Rename or move files as needed so this tree matches your repository.
- 
 ## Assumptions and limitations
  
 - The map is a static 5×5 grid and the robot sees the whole map.
