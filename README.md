@@ -110,10 +110,3 @@ Rename or move files as needed so this tree matches your repository.
 ## Team
  
 See `docs/team_contributions.md`.
- 
-| Name | Contribution |
-|---|---|
-| _Beksultan_ | _Web application(HTML), main code_ |
-| _Alikhan_ | _Make a presentation_ |
-| _Nursultan_ | _Tech report_ |
-| _Ermuhamed_ | _Read me file_ | 
